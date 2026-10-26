@@ -1,0 +1,1276 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Feldtest-Protokoll</title>
+<style>
+:root {
+  --bg: #f4f5f7; --card: #ffffff; --fg: #1b1f24; --muted: #5b6470; --border: #d7dbe0;
+  --accent: #0b6e8a; --accent-fg: #ffffff; --ok: #1f7a3d; --warn: #9a5b00; --bad: #b42318;
+  --own: #e8f4f8; --set: #e7f5ec; --chip: #eef0f3;
+  --radius: 12px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111418; --card: #1a1f25; --fg: #e8ebef; --muted: #9aa4b0; --border: #2d353e;
+    --accent: #3fb2d1; --accent-fg: #06222b; --ok: #4cc27a; --warn: #f0b04a; --bad: #ff7a6e;
+    --own: #16303a; --set: #15301f; --chip: #242b33;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111418; --card: #1a1f25; --fg: #e8ebef; --muted: #9aa4b0; --border: #2d353e;
+  --accent: #3fb2d1; --accent-fg: #06222b; --ok: #4cc27a; --warn: #f0b04a; --bad: #ff7a6e;
+  --own: #16303a; --set: #15301f; --chip: #242b33;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  padding-bottom: 96px;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+.bar {
+  position: sticky; top: 0; z-index: 10; background: var(--card); border-bottom: 1px solid var(--border);
+  padding: calc(env(safe-area-inset-top) + 8px) 16px 8px; display: flex; align-items: center; gap: 12px;
+}
+.clock { font-variant-numeric: tabular-nums; font-size: 28px; font-weight: 700; letter-spacing: .5px; }
+.clock small { display: block; font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+.bar .spacer { flex: 1; }
+.chip { background: var(--chip); border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; font-size: 14px; white-space: nowrap; }
+.chip.person { font-weight: 700; }
+.saved { font-size: 12px; color: var(--muted); text-align: right; min-width: 70px; }
+.saved.err { color: var(--bad); font-weight: 600; }
+.tabs { display: flex; gap: 4px; padding: 8px 16px; overflow-x: auto; position: sticky; top: 64px; z-index: 9; background: var(--bg); }
+.tabs button { border: 1px solid var(--border); background: var(--card); border-radius: 999px; padding: 8px 14px; white-space: nowrap; }
+.tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+main { max-width: 760px; margin: 0 auto; padding: 0 16px; }
+section[hidden] { display: none; }
+h2 { font-size: 18px; margin: 20px 0 8px; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); margin: 10px 0; overflow: hidden; }
+.card-h { display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; user-select: none; }
+.sid { font-weight: 800; min-width: 38px; }
+.stitle { flex: 1; font-weight: 600; }
+.badge { font-size: 12px; border-radius: 999px; padding: 2px 8px; border: 1px solid var(--border); white-space: nowrap; }
+.badge.pflicht { border-color: var(--accent); color: var(--accent); }
+.badge.done { background: var(--set); border-color: var(--ok); color: var(--ok); }
+.card-b { padding: 0 14px 14px; border-top: 1px solid var(--border); }
+.card-b p { margin: 10px 0; }
+.muted { color: var(--muted); font-size: 14px; }
+details { margin: 8px 0; border: 1px solid var(--border); border-radius: 10px; padding: 6px 10px; }
+details.own { background: var(--own); }
+summary { cursor: pointer; font-weight: 600; }
+ol { margin: 6px 0 4px; padding-left: 22px; }
+li { margin: 3px 0; }
+.expect { border-left: 4px solid var(--accent); padding: 6px 10px; background: var(--chip); border-radius: 6px; }
+.run { border: 1px solid var(--border); border-radius: 10px; margin: 12px 0; padding: 10px; }
+.run-h { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+.run-h b { white-space: nowrap; }
+.run-h input { flex: 1 1 100px; min-width: 0; padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); }
+.mark { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; margin: 6px 0; }
+.mark-btn {
+  min-height: 52px; border-radius: 10px; border: 2px solid var(--accent); background: var(--card);
+  text-align: left; padding: 8px 12px; font-weight: 600;
+}
+.mark.own .mark-btn { background: var(--own); }
+.mark.other .mark-btn { border-style: dashed; border-color: var(--border); font-weight: 500; }
+.mark.set .mark-btn { background: var(--set); border-color: var(--ok); }
+.mark-btn small { display: block; font-weight: 500; color: var(--muted); font-size: 12px; }
+.mark-time { font-variant-numeric: tabular-nums; font-weight: 700; min-width: 86px; text-align: right; }
+.mark-time.empty { color: var(--muted); font-weight: 400; }
+.mini { border: 1px solid var(--border); background: var(--card); border-radius: 8px; min-width: 44px; min-height: 44px; }
+.since { font-variant-numeric: tabular-nums; font-size: 15px; margin: 8px 0 2px; padding: 6px 10px; border-radius: 8px; background: var(--chip); }
+.since b { font-size: 20px; }
+.run-f { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 8px; }
+select, textarea, input[type=text], input[type=date], input[type=number] {
+  width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg);
+}
+textarea { min-height: 60px; resize: vertical; }
+.btn { border: 1px solid var(--accent); background: var(--card); color: var(--accent); border-radius: 10px; padding: 12px 16px; font-weight: 600; min-height: 48px; }
+.btn.primary { background: var(--accent); color: var(--accent-fg); }
+.btn.danger { border-color: var(--bad); color: var(--bad); }
+.btn.small { padding: 6px 10px; min-height: 36px; font-size: 14px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.field { margin: 10px 0; }
+.field label { display: block; font-size: 14px; color: var(--muted); margin-bottom: 4px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.check { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.check input { width: 24px; height: 24px; flex: none; margin-top: 1px; }
+.banner { margin: 10px 0; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--warn); color: var(--warn); background: var(--card); font-size: 14px; }
+.banner.bad { border-color: var(--bad); color: var(--bad); }
+.filters { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0; }
+.filters button { border: 1px solid var(--border); background: var(--card); border-radius: 999px; padding: 6px 12px; font-size: 14px; }
+.filters button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.fab {
+  position: fixed; right: 16px; bottom: calc(env(safe-area-inset-bottom) + 16px); z-index: 20;
+  background: var(--accent); color: var(--accent-fg); border: none; border-radius: 999px; padding: 16px 20px;
+  font-weight: 700; box-shadow: 0 4px 14px rgba(0,0,0,.25); min-height: 56px;
+}
+.free { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.free .t { font-variant-numeric: tabular-nums; font-weight: 700; }
+.flash { animation: flash .6s ease-out; }
+@keyframes flash { from { box-shadow: 0 0 0 6px var(--ok); } to { box-shadow: 0 0 0 0 transparent; } }
+#print-view { display: none; }
+
+@media print {
+  @page { size: A4; margin: 14mm 12mm; }
+  body { background: #fff; color: #000; padding: 0; font-size: 10.5pt; }
+  .bar, .tabs, main, .fab { display: none !important; }
+  #print-view { display: block; }
+  .p-head { border-bottom: 2px solid #000; margin-bottom: 8pt; padding-bottom: 4pt; }
+  .p-head h1 { font-size: 15pt; margin: 0 0 4pt; }
+  .p-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 3pt 16pt; font-size: 10pt; }
+  .p-meta div { border-bottom: 1px solid #999; padding: 3pt 0; }
+  .p-s { page-break-inside: avoid; break-inside: avoid; border: 1px solid #000; padding: 6pt 8pt; margin: 8pt 0; }
+  .p-s h2 { font-size: 12pt; margin: 0 0 3pt; }
+  .p-s p, .p-s ol { margin: 2pt 0; }
+  .p-s ol { padding-left: 14pt; }
+  .p-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 8pt; }
+  table { border-collapse: collapse; width: 100%; margin-top: 4pt; }
+  th, td { border: 1px solid #000; padding: 3pt 4pt; text-align: left; font-size: 9.5pt; }
+  td.t { font-family: "Courier New", monospace; white-space: nowrap; height: 17pt; }
+  .p-blank { display: inline-block; border-bottom: 1px solid #000; height: 10pt; vertical-align: bottom; }
+  .p-hint { font-size: 9pt; margin: 4pt 0 0; }
+  .p-free { page-break-before: always; break-before: page; }
+  .p-notes { height: 16pt; border-bottom: 1px solid #999; }
+}
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="clock" id="clock">--:--:--<small id="clock2">Gerätezeit</small></div>
+  <div class="spacer"></div>
+  <button class="chip person" id="person-chip" title="Person wechseln">Person A</button>
+  <div class="saved" id="saved">–</div>
+</header>
+<nav class="tabs" role="tablist">
+  <button role="tab" data-tab="start" aria-selected="true">Start</button>
+  <button role="tab" data-tab="szenarien" aria-selected="false">Szenarien</button>
+  <button role="tab" data-tab="frei" aria-selected="false">Freie Marken</button>
+  <button role="tab" data-tab="export" aria-selected="false">Export</button>
+</nav>
+<main>
+  <div id="storage-banner" class="banner bad" hidden>Speichern im Browser ist nicht möglich (privater Modus?). Daten gehen beim Schließen verloren – bitte regelmäßig exportieren.</div>
+
+  <section id="tab-start">
+    <h2>Angaben</h2>
+    <div class="grid2">
+      <div class="field"><label for="m-testtag">Testtag</label><input type="date" id="m-testtag" data-meta="testtag"></div>
+      <div class="field"><label for="m-person">Person</label>
+        <select id="m-person" data-meta="person"><option value="A">A – Darsteller</option><option value="B">B – Begleitung / 2. Darsteller</option></select></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="m-kuerzel">Kürzel (keine vollen Namen)</label><input type="text" id="m-kuerzel" data-meta="kuerzel" autocomplete="off"></div>
+      <div class="field"><label for="m-ort">Bereich / Bahnsteig</label><input type="text" id="m-ort" data-meta="ort" placeholder="z. B. U8 Bahnsteig"></div>
+    </div>
+
+    <h2>Kameras (IDs aus config.yaml)</h2>
+    <div class="grid2">
+      <div class="field"><label for="k-G">Gleiszone (G)</label><input type="text" id="k-G" data-kamera="G" placeholder="z. B. u8-bstg1-nord"></div>
+      <div class="field"><label for="k-VB">Verbleib (VB)</label><input type="text" id="k-VB" data-kamera="VB"></div>
+      <div class="field"><label for="k-GP">Gepäck (GP)</label><input type="text" id="k-GP" data-kamera="GP"></div>
+      <div class="field"><label for="k-K">Kombination (K, mehrere mit Komma)</label><input type="text" id="k-K" data-kamera="K"></div>
+    </div>
+
+    <h2>Aktive Konfiguration</h2>
+    <p class="muted">Wird beim Start jedes Durchgangs übernommen. Die Testleitung nennt die aktive Konfiguration.</p>
+    <div class="field">
+      <select id="m-konfig" data-meta="konfig">
+        <option value="feldtest">Feldtest (verkürzt): Verbleib 180 s, Gepäck 120 s</option>
+        <option value="produktion">Produktion: Verbleib 900 s, Gepäck 120 s</option>
+        <option value="eigene">Eigene Werte</option>
+      </select>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="p-verbleib">Verbleibschwelle (s)</label><input type="number" id="p-verbleib" data-param="verbleib_s" min="1" step="1"></div>
+      <div class="field"><label for="p-gepaeck">Gepäckschwelle (s)</label><input type="number" id="p-gepaeck" data-param="gepaeck_s" min="1" step="1"></div>
+    </div>
+
+    <h2>Zeitabgleich mit dem Server</h2>
+    <p class="muted">Die Testleitung zeigt die Serverzeit an (z. B. <code>watch -n1 date +%T</code>). Genau beim Sekundenwechsel „Jetzt abgleichen“ tippen und die angezeigte Serverzeit eintragen.</p>
+    <div class="row">
+      <button class="btn primary" data-act="sync">Jetzt abgleichen</button>
+      <span id="sync-at" class="muted"></span>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="sync-server">Serverzeit beim Abgleich (HH:MM:SS)</label><input type="text" id="sync-server" inputmode="numeric" placeholder="10:15:00"></div>
+      <div class="field"><label for="sync-offset">Abweichung Server − Gerät (s)</label><input type="number" id="sync-offset" step="0.1"></div>
+    </div>
+
+    <h2>Checkliste vor Testbeginn</h2>
+    <div id="checklist"></div>
+  </section>
+
+  <section id="tab-szenarien" hidden>
+    <div class="filters" id="filters"></div>
+    <div id="list"></div>
+  </section>
+
+  <section id="tab-frei" hidden>
+    <h2>Freie Marken</h2>
+    <p class="muted">Unerwartete Ereignisse festhalten: Fahrgast in der Zone, Zugeinfahrt, Personal spricht an, reale Situation während K2 … Der Knopf unten rechts erfasst sofort die Zeit.</p>
+    <div id="free-list"></div>
+  </section>
+
+  <section id="tab-export" hidden>
+    <h2>Export</h2>
+    <p class="muted">Nach jedem Block und am Testende exportieren und der Testleitung schicken. Die JSON-Datei wird für die Auswertung benötigt.</p>
+    <div class="row">
+      <button class="btn primary" data-act="share-json">JSON teilen / speichern</button>
+      <button class="btn" data-act="share-csv">CSV (Excel)</button>
+    </div>
+    <h2>Papierformular</h2>
+    <p class="muted">Druckt alle Szenarien mit Abläufen und Zeitfeldern (bereits erfasste Zeiten werden eingetragen) – als Rückfallebene ohne Handy.</p>
+    <button class="btn" data-act="print">Drucken / PDF</button>
+    <h2>Daten</h2>
+    <div class="row">
+      <button class="btn" data-act="import">Export wieder einlesen</button>
+      <button class="btn danger" data-act="reset">Alle Daten löschen</button>
+    </div>
+    <input type="file" id="import-file" accept="application/json,.json" hidden>
+    <p class="muted" id="stats"></p>
+  </section>
+</main>
+<button class="fab" data-act="free">+ Marke</button>
+<div id="print-view"></div>
+
+<script type="application/json" id="szenarien">
+{
+  "version": "1.0",
+  "gruppen": {
+    "G": "Use Case 1 – Person im Gleisbereich (Ersatz-Gleiszone)",
+    "VB": "Use Case 2 – Verbleiber",
+    "GP": "Use Case 3 – Zurückgelassene Gegenstände",
+    "K": "Kombination und Normalbetrieb"
+  },
+  "konfigurationen": {
+    "feldtest": {"verbleib_s": 180, "gepaeck_s": 120},
+    "produktion": {"verbleib_s": 900, "gepaeck_s": 120}
+  },
+  "szenarien": [
+    {
+      "id": "G1", "gruppe": "G", "titel": "Ersatz-Gleiszone betreten und verlassen", "prio": "Pflicht", "wdh": 3, "dauer_min": 2,
+      "material": "",
+      "ziel": "Sofortalarm beim Betreten, Ende-Meldung nach dem Verlassen.",
+      "ablauf_a": [
+        "2 m vor der Zone 5 s ruhig stehen.",
+        "In die Zone gehen – »Zone betreten« tippen, sobald der erste Fuß in der Zone steht.",
+        "10 s in der Zone stehen bleiben.",
+        "Zone verlassen – »Zone verlassen« tippen, sobald beide Füße draußen sind.",
+        "10 s außerhalb warten, dann nächster Durchgang."
+      ],
+      "ablauf_b": [
+        "Mindestens 5 m entfernt oder außerhalb des Kamerabilds stehen.",
+        "Auf Fahrgäste achten; bei Störungen abbrechen und eine freie Marke setzen."
+      ],
+      "erwartet": "Alarm »Person im Gleisbereich« spätestens 3 s nach dem Betreten; »beendet« 0–10 s nach dem Verlassen.",
+      "marken": [
+        {"id": "betreten", "text": "Zone betreten", "wer": "A"},
+        {"id": "verlassen", "text": "Zone verlassen", "wer": "A"}
+      ],
+      "pruefung": [
+        {"art": "ereignis", "typ": "track_intrusion", "status": "raised", "bezug": "betreten", "min_s": -2, "max_s": 3, "text": "Alarm nach Betreten"},
+        {"art": "ereignis", "typ": "track_intrusion", "status": "cleared", "bezug": "verlassen", "min_s": 0, "max_s": 10, "text": "Ende-Meldung nach Verlassen"}
+      ]
+    },
+    {
+      "id": "G2", "gruppe": "G", "titel": "Zone im Gehtempo durchqueren", "prio": "Pflicht", "wdh": 3, "dauer_min": 1,
+      "material": "",
+      "ziel": "Alarm auch bei kurzem Aufenthalt in der Zone.",
+      "ablauf_a": [
+        "Etwa 3 m vor der Zone starten.",
+        "Die Zone im normalen Gehtempo durchqueren, ohne anzuhalten – »Zone betreten« beim ersten Schritt in die Zone tippen.",
+        "»Zone verlassen« tippen, sobald die Zone verlassen ist.",
+        "Hinter der Zone 10 s warten."
+      ],
+      "ablauf_b": [
+        "Mindestens 5 m Abstand halten und den Bereich sichern.",
+        "Ungefähre Aufenthaltsdauer in der Zone als Notiz festhalten."
+      ],
+      "erwartet": "Alarm spätestens 4 s nach dem Betreten (Aufenthalt in der Zone mind. ca. 1 s).",
+      "marken": [
+        {"id": "betreten", "text": "Zone betreten", "wer": "A"},
+        {"id": "verlassen", "text": "Zone verlassen", "wer": "A"}
+      ],
+      "pruefung": [
+        {"art": "ereignis", "typ": "track_intrusion", "status": "raised", "bezug": "betreten", "min_s": -2, "max_s": 4, "text": "Alarm beim Durchqueren"}
+      ]
+    },
+    {
+      "id": "G3", "gruppe": "G", "titel": "An der Zonengrenze stehen, darüber lehnen (Negativtest)", "prio": "Pflicht", "wdh": 3, "dauer_min": 1,
+      "material": "",
+      "ziel": "Kein Alarm, solange die Füße außerhalb der Zone bleiben.",
+      "ablauf_a": [
+        "Direkt an die Zonengrenze stellen, Füße vollständig außerhalb – »Start« tippen.",
+        "15 s stehen bleiben, dabei Oberkörper und einen Arm deutlich über die Zone lehnen (Gleichgewicht halten).",
+        "Einen Schritt zurücktreten – »Ende« tippen."
+      ],
+      "ablauf_b": [
+        "Prüfen, dass die Füße von A wirklich außerhalb der Markierung bleiben; sonst Notiz."
+      ],
+      "erwartet": "Kein Alarm (maßgeblich ist der Bodenkontaktpunkt der Person).",
+      "marken": [
+        {"id": "start", "text": "Start", "wer": "A"},
+        {"id": "ende", "text": "Ende", "wer": "A"}
+      ],
+      "pruefung": [
+        {"art": "kein_ereignis", "typ": "track_intrusion", "status": "raised", "von": "start", "von_s": -1, "bis": "ende", "bis_s": 3, "text": "kein Alarm"}
+      ]
+    },
+    {
+      "id": "G4", "gruppe": "G", "titel": "Liegen in der Zone (simulierter Sturz)", "prio": "Pflicht", "wdh": 2, "dauer_min": 2,
+      "material": "Isomatte oder Decke",
+      "ziel": "Alarm beim Betreten; der Alarm bleibt bestehen, solange die Person liegt.",
+      "ablauf_a": [
+        "Mit Matte in die Zone gehen – »Zone betreten« tippen.",
+        "Matte auslegen und langsam hinlegen (kein echter Sturz!) – »hingelegt« tippen.",
+        "30 s ruhig liegen bleiben.",
+        "Aufstehen – »aufgestanden« tippen.",
+        "Matte nehmen und die Zone verlassen – »Zone verlassen« tippen."
+      ],
+      "ablauf_b": [
+        "In Rufweite bleiben und hilfsbereiten Fahrgästen den Test erklären (Infokarte).",
+        "Abbrechen, wenn Fahrgäste oder Personal eingreifen wollen."
+      ],
+      "erwartet": "Alarm spätestens 3 s nach dem Betreten; keine Ende-Meldung zwischen »hingelegt« und »aufgestanden«.",
+      "marken": [
+        {"id": "betreten", "text": "Zone betreten", "wer": "A"},
+        {"id": "hingelegt", "text": "hingelegt", "wer": "A"},
+        {"id": "aufgestanden", "text": "aufgestanden", "wer": "A"},
+        {"id": "verlassen", "text": "Zone verlassen", "wer": "A"}
+      ],
+      "pruefung": [
+        {"art": "ereignis", "typ": "track_intrusion", "status": "raised", "bezug": "betreten", "min_s": -2, "max_s": 3, "text": "Alarm nach Betreten"},
+        {"art": "kein_ereignis", "typ": "track_intrusion", "status": "cleared", "von": "hingelegt", "bis": "aufgestanden", "text": "Alarm bleibt während des Liegens bestehen"}
+      ]
+    },
+    {
+      "id": "G5", "gruppe": "G", "titel": "Zwei Personen gleichzeitig in der Zone", "prio": "Optional", "wdh": 2, "dauer_min": 2,
+      "material": "",
+      "ziel": "Für jede Person wird ein eigener Alarm ausgelöst.",
+      "ablauf_a": [
+        "Gemeinsam mit B vor der Zone stehen.",
+        "In die Zone gehen – »A betritt Zone« tippen.",
+        "Stehen bleiben, bis B ebenfalls 10 s in der Zone ist.",
+        "Zone verlassen – »A verlässt Zone« tippen."
+      ],
+      "ablauf_b": [
+        "Ca. 5 s nach A die Zone betreten (mind. 1 m Abstand zu A) – »B betritt Zone« tippen.",
+        "Nach A die Zone verlassen – »B verlässt Zone« tippen."
+      ],
+      "erwartet": "Zwei getrennte Alarme, jeweils spätestens 3 s nach dem Betreten.",
+      "marken": [
+        {"id": "betreten_a", "text": "A betritt Zone", "wer": "A"},
+        {"id": "betreten_b", "text": "B betritt Zone", "wer": "B"},
+        {"id": "verlassen_a", "text": "A verlässt Zone", "wer": "A"},
+        {"id": "verlassen_b", "text": "B verlässt Zone", "wer": "B"}
+      ],
+      "pruefung": [
+        {"art": "ereignis", "typ": "track_intrusion", "status": "raised", "bezug": "betreten_a", "min_s": -2, "max_s": 3, "text": "Alarm für A"},
+        {"art": "ereignis", "typ": "track_intrusion", "status": "raised", "bezug": "betreten_b", "min_s": -2, "max_s": 3, "text": "Alarm für B"}
+      ]
+    },
+    {
+      "id": "G6", "gruppe": "G", "titel": "Verdeckung durch eine zweite Person", "prio": "Optional", "wdh": 2, "dauer_min": 2,
+      "material": "",
+      "ziel": "Ein laufender Alarm bleibt trotz kurzer Verdeckung bestehen.",
+      "ablauf_a": [
+        "Zone betreten – »Zone betreten« tippen, dann ruhig stehen bleiben.",
+        "Stehen bleiben, während B verdeckt.",
+        "Nachdem B zur Seite getreten ist, noch 5 s stehen, dann die Zone verlassen – »Zone verlassen« tippen."
+      ],
+      "ablauf_b": [
+        "5 s nach A zwischen Kamera und A stellen, sodass A weitgehend verdeckt ist (B selbst außerhalb der Zone!) – »verdeckt« tippen.",
+        "10 s stehen bleiben, dann zur Seite treten – »frei« tippen."
+      ],
+      "erwartet": "Alarm beim Betreten; keine Ende-Meldung während der 10 s Verdeckung.",
+      "marken": [
+        {"id": "betreten", "text": "Zone betreten", "wer": "A"},
+        {"id": "verdeckt", "text": "verdeckt", "wer": "B"},
+        {"id": "frei", "text": "frei", "wer": "B"},
+        {"id": "verlassen", "text": "Zone verlassen", "wer": "A"}
+      ],
+      "pruefung": [
+        {"art": "ereignis", "typ": "track_intrusion", "status": "raised", "bezug": "betreten", "min_s": -2, "max_s": 3, "text": "Alarm nach Betreten"},
+        {"art": "kein_ereignis", "typ": "track_intrusion", "status": "cleared", "von": "verdeckt", "bis": "frei", "bis_s": 3, "text": "Alarm bleibt trotz Verdeckung bestehen"}
+      ]
+    },
+    {
+      "id": "VB1", "gruppe": "VB", "titel": "Verbleib über der Schwelle", "prio": "Pflicht", "wdh": 2, "dauer_min": 6,
+      "material": "",
+      "ziel": "Meldung, wenn eine Person länger als die Verbleibschwelle bleibt.",
+      "ablauf_a": [
+        "Von außerhalb des Kamerabilds in die Verbleibezone gehen (ohne konfigurierte Zone: ins Bild) – »betreten« tippen.",
+        "Ruhig sitzen oder stehen (lesen, telefonieren erlaubt), nicht aus dem Bild gehen.",
+        "Bis Schwelle + 2 min bleiben (Anzeige »seit betreten«).",
+        "Bereich und Kamerabild vollständig verlassen – »verlassen« tippen."
+      ],
+      "ablauf_b": [
+        "Aus der Distanz außerhalb des Bildes beobachten.",
+        "Notieren, ob A zwischendurch verdeckt war."
+      ],
+      "erwartet": "Meldung »Verbleiber« bei Erreichen der Schwelle (Toleranz −15 s / +30 s).",
+      "marken": [
+        {"id": "betreten", "text": "betreten", "wer": "A"},
+        {"id": "verlassen", "text": "verlassen", "wer": "A"}
+      ],
+      "pruefung": [
+        {"art": "ereignis", "typ": "loitering", "status": "raised", "bezug": "betreten", "min_s": "verbleib_s-15", "max_s": "verbleib_s+30", "text": "Meldung bei Erreichen der Schwelle"}
+      ]
+    },
+    {
+      "id": "VB2", "gruppe": "VB", "titel": "Verbleib unter der Schwelle (Negativtest)", "prio": "Pflicht", "wdh": 2, "dauer_min": 4,
+      "material": "",
+      "ziel": "Keine Meldung, wenn die Schwelle nicht erreicht wird.",
+      "ablauf_a": [
+        "Von außerhalb des Bildes in die Verbleibezone gehen – »betreten« tippen.",
+        "Bis 1 min vor Erreichen der Schwelle bleiben (Feldtest: 2 min, Produktion: 14 min).",
+        "Kamerabild vollständig verlassen – »verlassen« tippen, mindestens 1 min außerhalb bleiben."
+      ],
+      "ablauf_b": [
+        "Aus der Distanz beobachten und auf rechtzeitiges Verlassen achten."
+      ],
+      "erwartet": "Keine Meldung.",
+      "marken": [
+        {"id": "betreten", "text": "betreten", "wer": "A"},
+        {"id": "verlassen", "text": "verlassen", "wer": "A"}
+      ],
+      "pruefung": [
+        {"art": "kein_ereignis", "typ": "loitering", "status": "raised", "von": "betreten", "bis": "verlassen", "bis_s": 15, "text": "keine Meldung"}
+      ]
+    },
+    {
+      "id": "VB3", "gruppe": "VB", "titel": "Verlassen setzt die Aufenthaltszeit zurück", "prio": "Optional", "wdh": 1, "dauer_min": 8,
+      "material": "",
+      "ziel": "Nach Verlassen des Bildes beginnt die Aufenthaltszeit neu.",
+      "ablauf_a": [
+        "In die Verbleibezone gehen – »betreten (1)« tippen.",
+        "Etwa 2/3 der Schwelle bleiben (Feldtest: 2 min).",
+        "Bild vollständig verlassen – »verlassen (1)« tippen, 60 s außerhalb bleiben.",
+        "Zurück in die Zone – »betreten (2)« tippen.",
+        "Bis Schwelle + 1 min bleiben, dann das Bild verlassen – »verlassen (2)« tippen."
+      ],
+      "ablauf_b": [
+        "Zeiten mitverfolgen und A an den Wechsel erinnern."
+      ],
+      "erwartet": "Keine Meldung vor Ablauf der vollen Schwelle nach »betreten (2)«, danach eine Meldung (−15 s / +30 s).",
+      "marken": [
+        {"id": "betreten_1", "text": "betreten (1)", "wer": "A"},
+        {"id": "verlassen_1", "text": "verlassen (1)", "wer": "A"},
+        {"id": "betreten_2", "text": "betreten (2)", "wer": "A"},
+        {"id": "verlassen_2", "text": "verlassen (2)", "wer": "A"}
+      ],
+      "pruefung": [
+        {"art": "kein_ereignis", "typ": "loitering", "status": "raised", "von": "betreten_1", "bis": "betreten_2", "bis_s": "verbleib_s-20", "text": "keine Meldung vor neuer voller Schwelle"},
+        {"art": "ereignis", "typ": "loitering", "status": "raised", "bezug": "betreten_2", "min_s": "verbleib_s-15", "max_s": "verbleib_s+30", "text": "Meldung nach neuer Schwelle"}
+      ]
+    },
+    {
+      "id": "VB4", "gruppe": "VB", "titel": "Hilflose Person liegt am Boden", "prio": "Pflicht", "wdh": 1, "dauer_min": 5,
+      "material": "Isomatte oder Decke",
+      "ziel": "Eine liegende Person wird nach Ablauf der Schwelle gemeldet.",
+      "ablauf_a": [
+        "Mit Matte von außerhalb des Bildes in die Verbleibezone gehen, Matte auslegen, langsam hinlegen – »hingelegt« tippen.",
+        "Ruhig liegen bleiben bis Schwelle + 1 min.",
+        "Aufstehen – »aufgestanden« tippen und das Bild verlassen."
+      ],
+      "ablauf_b": [
+        "In Sichtweite außerhalb des Bildes bleiben und Fahrgästen den Test erklären.",
+        "Abbrechen, wenn Hilfe angeboten oder Personal gerufen wird."
+      ],
+      "erwartet": "Meldung »Verbleiber« bei Erreichen der Schwelle (−15 s / +30 s).",
+      "marken": [
+        {"id": "hingelegt", "text": "hingelegt", "wer": "A"},
+        {"id": "aufgestanden", "text": "aufgestanden", "wer": "A"}
+      ],
+      "pruefung": [
+        {"art": "ereignis", "typ": "loitering", "status": "raised", "bezug": "hingelegt", "min_s": "verbleib_s-15", "max_s": "verbleib_s+30", "text": "Meldung der liegenden Person"}
+      ]
+    },
+    {
+      "id": "VB5", "gruppe": "VB", "titel": "Zwei Personen verbleiben gemeinsam", "prio": "Optional", "wdh": 1, "dauer_min": 5,
+      "material": "",
+      "ziel": "Zwei verbleibende Personen werden getrennt gemeldet.",
+      "ablauf_a": [
+        "Gemeinsam mit B in die Verbleibezone gehen – »A betritt« tippen.",
+        "Mit ca. 1,5 m Abstand zu B unterhalten, bis Schwelle + 1 min.",
+        "Gemeinsam das Bild verlassen – »verlassen« tippen."
+      ],
+      "ablauf_b": [
+        "Mit A die Zone betreten – »B betritt« tippen.",
+        "Mit A das Bild verlassen."
+      ],
+      "erwartet": "Zwei Meldungen »Verbleiber«.",
+      "marken": [
+        {"id": "betreten_a", "text": "A betritt", "wer": "A"},
+        {"id": "betreten_b", "text": "B betritt", "wer": "B"},
+        {"id": "verlassen", "text": "verlassen", "wer": "A"}
+      ],
+      "pruefung": [
+        {"art": "ereignis", "typ": "loitering", "status": "raised", "bezug": "betreten_a", "min_s": "verbleib_s-15", "max_s": "verbleib_s+30", "text": "Meldung für A"},
+        {"art": "ereignis", "typ": "loitering", "status": "raised", "bezug": "betreten_b", "min_s": "verbleib_s-15", "max_s": "verbleib_s+30", "text": "Meldung für B"}
+      ]
+    },
+    {
+      "id": "GP1", "gruppe": "GP", "titel": "Koffer abstellen und weggehen", "prio": "Pflicht", "wdh": 3, "dauer_min": 4,
+      "material": "Koffer (Trolley, mittelgroß), als Testobjekt gekennzeichnet",
+      "ziel": "Alarm, wenn ein Koffer länger als die Gepäckschwelle unbeaufsichtigt ist; Ende-Meldung bei Rückkehr.",
+      "ablauf_a": [
+        "Koffer an der vereinbarten Stelle abstellen – »abgestellt« tippen.",
+        "20 s neben dem Koffer stehen bleiben.",
+        "Mindestens 5 m weggehen, möglichst aus dem Bild – »weg« tippen, sobald 3 m Abstand erreicht sind.",
+        "Den Koffer mit B aus der Distanz ständig im Blick behalten.",
+        "Nach Schwelle + 60 s (Anzeige »seit weg«) zurückgehen – »zurück« tippen, sobald A direkt daneben steht.",
+        "10 s stehen bleiben, Koffer nehmen – »aufgenommen« tippen und das Bild verlassen."
+      ],
+      "ablauf_b": [
+        "Mit A außerhalb des Bildes stehen und den Koffer ständig im Blick behalten.",
+        "Fahrgäste oder Personal, die sich um den Koffer kümmern wollen, ansprechen (Infokarte) und den Durchgang abbrechen."
+      ],
+      "erwartet": "Alarm »Zurückgelassener Gegenstand« (Koffer) ca. Schwelle nach »weg« (−10 s / +40 s); Ende-Meldung bis 20 s nach »zurück«.",
+      "marken": [
+        {"id": "abgestellt", "text": "abgestellt", "wer": "A"},
+        {"id": "weg", "text": "weg (≥ 3 m)", "wer": "A"},
+        {"id": "zurueck", "text": "zurück am Koffer", "wer": "A"},
+        {"id": "aufgenommen", "text": "aufgenommen", "wer": "A"}
+      ],
+      "pruefung": [
+        {"art": "ereignis", "typ": "abandoned_object", "status": "raised", "bezug": "weg", "min_s": "gepaeck_s-10", "max_s": "gepaeck_s+40", "text": "Alarm nach Gepäckschwelle"},
+        {"art": "ereignis", "typ": "abandoned_object", "status": "cleared", "bezug": "zurueck", "min_s": 0, "max_s": 20, "text": "Ende-Meldung bei Rückkehr"}
+      ]
+    },
+    {
+      "id": "GP2", "gruppe": "GP", "titel": "Rucksack abstellen und weggehen", "prio": "Pflicht", "wdh": 2, "dauer_min": 4,
+      "material": "Rucksack (ca. 30×30×15 cm), als Testobjekt gekennzeichnet",
+      "ziel": "Auch ein Rucksack (Mindestgröße laut DSFA) wird erkannt.",
+      "ablauf_a": [
+        "Rucksack an der vereinbarten Stelle abstellen – »abgestellt« tippen.",
+        "20 s daneben stehen bleiben.",
+        "Mindestens 5 m weggehen – »weg« tippen, sobald 3 m Abstand erreicht sind.",
+        "Nach Schwelle + 60 s zurück – »zurück« tippen.",
+        "Rucksack nehmen – »aufgenommen« tippen und das Bild verlassen."
+      ],
+      "ablauf_b": [
+        "Wie bei GP1: aus der Distanz sichern, bei Eingreifen Dritter abbrechen."
+      ],
+      "erwartet": "Alarm (Rucksack) ca. Schwelle nach »weg« (−10 s / +40 s); Ende-Meldung bis 20 s nach »zurück«.",
+      "marken": [
+        {"id": "abgestellt", "text": "abgestellt", "wer": "A"},
+        {"id": "weg", "text": "weg (≥ 3 m)", "wer": "A"},
+        {"id": "zurueck", "text": "zurück am Rucksack", "wer": "A"},
+        {"id": "aufgenommen", "text": "aufgenommen", "wer": "A"}
+      ],
+      "pruefung": [
+        {"art": "ereignis", "typ": "abandoned_object", "status": "raised", "bezug": "weg", "min_s": "gepaeck_s-10", "max_s": "gepaeck_s+40", "text": "Alarm nach Gepäckschwelle"},
+        {"art": "ereignis", "typ": "abandoned_object", "status": "cleared", "bezug": "zurueck", "min_s": 0, "max_s": 20, "text": "Ende-Meldung bei Rückkehr"}
+      ]
+    },
+    {
+      "id": "GP3", "gruppe": "GP", "titel": "Person bleibt beim Gepäck (Negativtest)", "prio": "Pflicht", "wdh": 2, "dauer_min": 5,
+      "material": "Koffer",
+      "ziel": "Kein Alarm, solange die Person beim Gepäck bleibt.",
+      "ablauf_a": [
+        "Koffer abstellen – »abgestellt« tippen.",
+        "Direkt daneben stehen oder sitzen (≤ 1 m), Schwelle + 2 min lang (Anzeige »seit abgestellt«).",
+        "Koffer nehmen – »aufgenommen« tippen und das Bild verlassen."
+      ],
+      "ablauf_b": [
+        "Außerhalb des Bildes warten."
+      ],
+      "erwartet": "Kein Alarm.",
+      "marken": [
+        {"id": "abgestellt", "text": "abgestellt", "wer": "A"},
+        {"id": "aufgenommen", "text": "aufgenommen", "wer": "A"}
+      ],
+      "pruefung": [
+        {"art": "kein_ereignis", "typ": "abandoned_object", "status": "raised", "von": "abgestellt", "bis": "aufgenommen", "bis_s": 5, "text": "kein Alarm"}
+      ]
+    },
+    {
+      "id": "GP4", "gruppe": "GP", "titel": "Kurz weg, Rückkehr vor Ablauf der Schwelle", "prio": "Pflicht", "wdh": 2, "dauer_min": 5,
+      "material": "Koffer",
+      "ziel": "Rückkehr vor Ablauf der Schwelle setzt die Zeit zurück.",
+      "ablauf_a": [
+        "Koffer abstellen – »abgestellt« tippen, 10 s daneben stehen.",
+        "Weggehen (≥ 5 m) – »weg (1)« tippen.",
+        "Nach 60 s zurück – »zurück (1)« tippen, 20 s daneben stehen.",
+        "Erneut weggehen – »weg (2)« tippen.",
+        "Nach Schwelle + 60 s zurück – »zurück (2)« tippen und den Koffer mitnehmen."
+      ],
+      "ablauf_b": [
+        "Zeiten mitverfolgen und A an die Wechsel erinnern."
+      ],
+      "erwartet": "Kein Alarm vor Ablauf der vollen Schwelle nach »weg (2)«, danach Alarm (−10 s / +40 s).",
+      "marken": [
+        {"id": "abgestellt", "text": "abgestellt", "wer": "A"},
+        {"id": "weg_1", "text": "weg (1)", "wer": "A"},
+        {"id": "zurueck_1", "text": "zurück (1)", "wer": "A"},
+        {"id": "weg_2", "text": "weg (2)", "wer": "A"},
+        {"id": "zurueck_2", "text": "zurück (2)", "wer": "A"}
+      ],
+      "pruefung": [
+        {"art": "kein_ereignis", "typ": "abandoned_object", "status": "raised", "von": "weg_1", "bis": "weg_2", "bis_s": "gepaeck_s-15", "text": "kein Alarm vor neuer voller Schwelle"},
+        {"art": "ereignis", "typ": "abandoned_object", "status": "raised", "bezug": "weg_2", "min_s": "gepaeck_s-10", "max_s": "gepaeck_s+40", "text": "Alarm nach zweitem Weggehen"}
+      ]
+    },
+    {
+      "id": "GP5", "gruppe": "GP", "titel": "Passanten gehen am Gepäck vorbei", "prio": "Pflicht", "wdh": 2, "dauer_min": 4,
+      "material": "Koffer",
+      "ziel": "Vorbeigehende Personen gelten nicht als Aufsicht.",
+      "ablauf_a": [
+        "Koffer abstellen – »abgestellt« tippen, 10 s daneben stehen.",
+        "Weggehen (≥ 5 m) – »weg« tippen.",
+        "Nach Schwelle + 60 s zurück – »zurück« tippen und den Koffer mitnehmen."
+      ],
+      "ablauf_b": [
+        "30, 60 und 90 s nach »weg« jeweils zügig in ca. 1 m Abstand am Koffer vorbeigehen, ohne stehen zu bleiben – jeweils »vorbei« tippen.",
+        "Dazwischen außerhalb des Bildes warten."
+      ],
+      "erwartet": "Alarm trotz der Passanten ca. Schwelle nach »weg« (−10 s / +40 s).",
+      "marken": [
+        {"id": "abgestellt", "text": "abgestellt", "wer": "A"},
+        {"id": "weg", "text": "weg (≥ 3 m)", "wer": "A"},
+        {"id": "vorbei_1", "text": "vorbei (1)", "wer": "B"},
+        {"id": "vorbei_2", "text": "vorbei (2)", "wer": "B"},
+        {"id": "vorbei_3", "text": "vorbei (3)", "wer": "B"},
+        {"id": "zurueck", "text": "zurück am Koffer", "wer": "A"}
+      ],
+      "pruefung": [
+        {"art": "ereignis", "typ": "abandoned_object", "status": "raised", "bezug": "weg", "min_s": "gepaeck_s-10", "max_s": "gepaeck_s+40", "text": "Alarm trotz Passanten"}
+      ]
+    },
+    {
+      "id": "GP6", "gruppe": "GP", "titel": "Unbekannter Gegenstand (Karton)", "prio": "Pflicht", "wdh": 2, "dauer_min": 4,
+      "material": "Karton ca. 40×30×30 cm, verschlossen, beschriftet »Testobjekt«",
+      "ziel": "Gegenstände ohne Gepäckklasse werden über den Hintergrundmodell-Vergleich erkannt.",
+      "ablauf_a": [
+        "Karton abstellen – »abgestellt« tippen, 20 s daneben stehen.",
+        "Weggehen (≥ 5 m) – »weg« tippen.",
+        "Nach Schwelle + 90 s zurück – »zurück« tippen.",
+        "Karton nehmen – »aufgenommen« tippen und das Bild verlassen."
+      ],
+      "ablauf_b": [
+        "Wie bei GP1: aus der Distanz sichern."
+      ],
+      "erwartet": "Alarm (Objekt »unbekannt« oder Gepäckklasse) ca. Schwelle nach »weg« (−10 s / +60 s, das Hintergrundmodell braucht etwas länger); Ende-Meldung bis 30 s nach »zurück«.",
+      "marken": [
+        {"id": "abgestellt", "text": "abgestellt", "wer": "A"},
+        {"id": "weg", "text": "weg (≥ 3 m)", "wer": "A"},
+        {"id": "zurueck", "text": "zurück am Karton", "wer": "A"},
+        {"id": "aufgenommen", "text": "aufgenommen", "wer": "A"}
+      ],
+      "pruefung": [
+        {"art": "ereignis", "typ": "abandoned_object", "status": "raised", "bezug": "weg", "min_s": "gepaeck_s-10", "max_s": "gepaeck_s+60", "text": "Alarm für unbekannten Gegenstand"},
+        {"art": "ereignis", "typ": "abandoned_object", "status": "cleared", "bezug": "zurueck", "min_s": 0, "max_s": 30, "text": "Ende-Meldung bei Rückkehr"}
+      ]
+    },
+    {
+      "id": "GP7", "gruppe": "GP", "titel": "Kleiner Gegenstand unter Mindestgröße (Negativtest)", "prio": "Optional", "wdh": 1, "dauer_min": 4,
+      "material": "kleiner Gegenstand < 20 cm (leere Getränkedose, kleine Papiertüte)",
+      "ziel": "Gegenstände unter der Mindestgröße lösen keinen Alarm aus.",
+      "ablauf_a": [
+        "Gegenstand abstellen – »abgestellt« tippen.",
+        "Weggehen (≥ 5 m) – »weg« tippen.",
+        "Nach Schwelle + 60 s zurück und den Gegenstand aufheben – »aufgenommen« tippen."
+      ],
+      "ablauf_b": [
+        "Den Gegenstand aus der Distanz im Blick behalten."
+      ],
+      "erwartet": "Kein Alarm.",
+      "marken": [
+        {"id": "abgestellt", "text": "abgestellt", "wer": "A"},
+        {"id": "weg", "text": "weg (≥ 3 m)", "wer": "A"},
+        {"id": "aufgenommen", "text": "aufgenommen", "wer": "A"}
+      ],
+      "pruefung": [
+        {"art": "kein_ereignis", "typ": "abandoned_object", "status": "raised", "von": "weg", "bis": "aufgenommen", "bis_s": 5, "text": "kein Alarm"}
+      ]
+    },
+    {
+      "id": "GP8", "gruppe": "GP", "titel": "Eine andere Person entfernt das Gepäck", "prio": "Optional", "wdh": 2, "dauer_min": 4,
+      "material": "Koffer",
+      "ziel": "Ende-Meldung, wenn der Gegenstand nach dem Alarm entfernt wird.",
+      "ablauf_a": [
+        "Koffer abstellen – »abgestellt« tippen, 10 s daneben stehen.",
+        "Weggehen (≥ 5 m) – »weg« tippen und außerhalb des Bildes bleiben."
+      ],
+      "ablauf_b": [
+        "Schwelle + 30 s nach »weg« zum Koffer gehen, ihn sofort nehmen und aus dem Bild tragen – »entfernt« tippen, sobald der Koffer angehoben ist."
+      ],
+      "erwartet": "Alarm ca. Schwelle nach »weg«; Ende-Meldung bis 30 s nach »entfernt«.",
+      "marken": [
+        {"id": "abgestellt", "text": "abgestellt", "wer": "A"},
+        {"id": "weg", "text": "weg (≥ 3 m)", "wer": "A"},
+        {"id": "entfernt", "text": "entfernt", "wer": "B"}
+      ],
+      "pruefung": [
+        {"art": "ereignis", "typ": "abandoned_object", "status": "raised", "bezug": "weg", "min_s": "gepaeck_s-10", "max_s": "gepaeck_s+40", "text": "Alarm nach Gepäckschwelle"},
+        {"art": "ereignis", "typ": "abandoned_object", "status": "cleared", "bezug": "entfernt", "min_s": 0, "max_s": 30, "text": "Ende-Meldung nach Entfernen"}
+      ]
+    },
+    {
+      "id": "K1", "gruppe": "K", "titel": "Gepäck und Verbleiber gleichzeitig", "prio": "Optional", "wdh": 1, "dauer_min": 6,
+      "material": "Koffer",
+      "ziel": "Gleichzeitige Fälle verschiedener Use Cases werden unabhängig gemeldet.",
+      "ablauf_a": [
+        "Koffer abstellen – »abgestellt« tippen, 10 s daneben stehen, weggehen – »weg« tippen.",
+        "Nach Gepäckschwelle + 60 s zurück – »zurück« tippen und den Koffer mitnehmen."
+      ],
+      "ablauf_b": [
+        "Gleichzeitig mit »weg« von A in die Verbleibezone gehen, nicht in die Nähe des Koffers – »B betritt Verbleibezone« tippen.",
+        "Bis Verbleibschwelle + 1 min bleiben, dann das Bild verlassen – »B verlässt« tippen."
+      ],
+      "erwartet": "Ein Gepäck-Alarm und eine Verbleiber-Meldung, jeweils im erwarteten Zeitfenster.",
+      "marken": [
+        {"id": "abgestellt", "text": "abgestellt", "wer": "A"},
+        {"id": "weg", "text": "weg (≥ 3 m)", "wer": "A"},
+        {"id": "betreten_b", "text": "B betritt Verbleibezone", "wer": "B"},
+        {"id": "zurueck", "text": "zurück am Koffer", "wer": "A"},
+        {"id": "verlassen_b", "text": "B verlässt", "wer": "B"}
+      ],
+      "pruefung": [
+        {"art": "ereignis", "typ": "abandoned_object", "status": "raised", "bezug": "weg", "min_s": "gepaeck_s-10", "max_s": "gepaeck_s+40", "text": "Gepäck-Alarm"},
+        {"art": "ereignis", "typ": "loitering", "status": "raised", "bezug": "betreten_b", "min_s": "verbleib_s-15", "max_s": "verbleib_s+30", "text": "Verbleiber-Meldung"}
+      ]
+    },
+    {
+      "id": "K2", "gruppe": "K", "titel": "Normaler Fahrgastbetrieb beobachten (Fehlalarme)", "prio": "Pflicht", "wdh": 1, "dauer_min": 30,
+      "material": "",
+      "ziel": "Meldungen im normalen Betrieb erfassen und als berechtigt oder Fehlalarm bewerten. Möglichst mit Produktionskonfiguration.",
+      "ablauf_a": [
+        "»Start« tippen, dann 30 min ohne eigene Darstellung beobachten.",
+        "Auffällige reale Situationen (lange Wartende, Gepäck mit Besitzer in der Nähe, Personen nahe der Bahnsteigkante) als freie Marke mit kurzer Beschreibung erfassen – keine Fotos, keine Namen.",
+        "»Ende« tippen."
+      ],
+      "ablauf_b": [
+        "Wie A, in einem anderen Bahnsteigbereich bzw. an einer anderen Kamera."
+      ],
+      "erwartet": "Alle Meldungen dieses Zeitraums erscheinen in der Auswertung und werden einzeln bewertet.",
+      "marken": [
+        {"id": "start", "text": "Start", "wer": "A"},
+        {"id": "ende", "text": "Ende", "wer": "A"}
+      ],
+      "pruefung": [
+        {"art": "beobachtung", "von": "start", "bis": "ende", "text": "Meldungen im Normalbetrieb"}
+      ]
+    }
+  ]
+}
+</script>
+<script>
+(function () {
+  "use strict";
+  var DEF = JSON.parse(document.getElementById("szenarien").textContent);
+  var KEY = "kivideo-feldtest-v1";
+  var CHECKS = [
+    ["genehmigung", "Genehmigung der BVG (Hausrecht, Betriebsleitung) liegt vor und ist dabei"],
+    ["blsi", "Sicherheitsleitstelle (BLSI) und Sicherheitsdienst sind informiert"],
+    ["polizei", "Polizei ist über die Gepäckszenarien informiert (Termin, Ort, Ansprechpartner)"],
+    ["einwilligung", "Einwilligung beider Darsteller liegt vor"],
+    ["konfig", "Testleitung bestätigt: Testkonfiguration ist aktiv"],
+    ["zone", "Ersatz-Gleiszone ist markiert (mind. 3 m von der Bahnsteigkante)"],
+    ["objekte", "Testobjekte sind gekennzeichnet, Infokarten für Fahrgäste sind dabei"],
+    ["abgleich", "Zeitabgleich mit dem Server ist durchgeführt"],
+    ["gleis", "Allen ist klar: Niemand betritt das Gleis oder überschreitet die Sicherheitslinie"]
+  ];
+  var byId = {};
+  DEF.szenarien.forEach(function (s) { byId[s.id] = s; });
+
+  var state = load() || fresh();
+  var ui = { tab: "start", open: {}, filter: "alle", pflicht: false };
+  var storageOk = true;
+
+  function fresh() {
+    return {
+      format: "kivideo-feldtest/1",
+      meta: {
+        testtag: isoDate(Date.now()), person: "A", kuerzel: "", ort: "", konfig: "feldtest",
+        parameter: Object.assign({}, DEF.konfigurationen.feldtest),
+        kameras: { G: "", VB: "", GP: "", K: "" },
+        abgleich: { geraet_ms: null, server: "", offset_s: null },
+        checkliste: {}
+      },
+      runs: {},
+      frei: []
+    };
+  }
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+  var saveTimer = null;
+  function save() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(state));
+      storageOk = true;
+      setSaved("gespeichert " + hms(Date.now()), false);
+    } catch (e) {
+      storageOk = false;
+      setSaved("NICHT gespeichert", true);
+    }
+    document.getElementById("storage-banner").hidden = storageOk;
+  }
+  function saveSoon() { clearTimeout(saveTimer); saveTimer = setTimeout(save, 300); }
+  function setSaved(text, err) {
+    var el = document.getElementById("saved");
+    el.textContent = text;
+    el.className = "saved" + (err ? " err" : "");
+  }
+
+  // ------------------------------------------------------------- Zeit
+  function pad(n, w) { n = String(n); while (n.length < (w || 2)) n = "0" + n; return n; }
+  function hms(ms, tenths) {
+    var d = new Date(ms);
+    var s = pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+    return tenths ? s + "." + Math.floor(d.getMilliseconds() / 100) : s;
+  }
+  function isoDate(ms) { var d = new Date(ms); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function isoLocal(ms) {
+    var d = new Date(ms), off = -d.getTimezoneOffset(), sign = off >= 0 ? "+" : "-";
+    off = Math.abs(off);
+    return isoDate(ms) + "T" + hms(ms) + "." + pad(d.getMilliseconds(), 3) + sign + pad(Math.floor(off / 60)) + ":" + pad(off % 60);
+  }
+  function dur(sec) {
+    sec = Math.max(0, Math.floor(sec));
+    var h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+    return (h ? h + ":" + pad(m) : m) + ":" + pad(s);
+  }
+  function offsetMs() { var o = state.meta.abgleich.offset_s; return typeof o === "number" && isFinite(o) ? o * 1000 : 0; }
+  function parseHms(text, refMs) {
+    var m = /^\s*(\d{1,2}):(\d{2})(?::(\d{2})(?:[.,](\d{1,3}))?)?\s*$/.exec(text || "");
+    if (!m) return null;
+    var d = new Date(refMs);
+    d.setHours(+m[1], +m[2], +(m[3] || 0), m[4] ? Math.round(+("0." + m[4]) * 1000) : 0);
+    return d.getTime();
+  }
+  function plural(n) { return n + (n === 1 ? " Durchgang" : " Durchgänge"); }
+  function hasData() {
+    return state.frei.length > 0 || Object.keys(state.runs).some(function (k) { return state.runs[k].length > 0; });
+  }
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function buzz() { try { if (navigator.vibrate) navigator.vibrate(40); } catch (e) {} }
+
+  // ------------------------------------------------------------- Start
+  function renderStart() {
+    var m = state.meta;
+    document.querySelectorAll("[data-meta]").forEach(function (el) { el.value = m[el.dataset.meta] || ""; });
+    document.querySelectorAll("[data-kamera]").forEach(function (el) { el.value = m.kameras[el.dataset.kamera] || ""; });
+    document.querySelectorAll("[data-param]").forEach(function (el) { el.value = m.parameter[el.dataset.param]; });
+    document.getElementById("sync-server").value = m.abgleich.server || "";
+    document.getElementById("sync-offset").value = m.abgleich.offset_s == null ? "" : m.abgleich.offset_s;
+    document.getElementById("sync-at").textContent = m.abgleich.geraet_ms ? "Gerätezeit beim Abgleich: " + hms(m.abgleich.geraet_ms, true) : "";
+    var html = CHECKS.map(function (c) {
+      return '<label class="check"><input type="checkbox" data-check="' + c[0] + '"' + (m.checkliste[c[0]] ? " checked" : "") + "><span>" + esc(c[1]) + "</span></label>";
+    }).join("");
+    document.getElementById("checklist").innerHTML = html;
+    renderPerson();
+  }
+  function renderPerson() {
+    document.getElementById("person-chip").textContent = "Person " + state.meta.person;
+  }
+
+  // ------------------------------------------------------------- Szenarien
+  function runsOf(id) { return state.runs[id] || (state.runs[id] = []); }
+  function doneCount(id) { return runsOf(id).filter(function (r) { return r.status === "durchgefuehrt"; }).length; }
+  function renderFilters() {
+    var opts = [["alle", "Alle"]].concat(Object.keys(DEF.gruppen).map(function (g) { return [g, g]; }));
+    var html = opts.map(function (o) {
+      return '<button data-act="filter" data-f="' + o[0] + '" aria-pressed="' + (ui.filter === o[0]) + '">' + esc(o[1]) + "</button>";
+    }).join("") + '<button data-act="pflicht" aria-pressed="' + ui.pflicht + '">nur Pflicht</button>';
+    document.getElementById("filters").innerHTML = html;
+  }
+  function renderList() {
+    var html = "", last = null;
+    DEF.szenarien.forEach(function (s) {
+      if (ui.filter !== "alle" && s.gruppe !== ui.filter) return;
+      if (ui.pflicht && s.prio !== "Pflicht") return;
+      if (s.gruppe !== last) { html += "<h2>" + esc(DEF.gruppen[s.gruppe]) + "</h2>"; last = s.gruppe; }
+      html += '<article class="card" id="card-' + s.id + '">' + cardInner(s) + "</article>";
+    });
+    document.getElementById("list").innerHTML = html;
+  }
+  function renderCard(id) {
+    var el = document.getElementById("card-" + id);
+    if (el) el.innerHTML = cardInner(byId[id]);
+  }
+  function cardInner(s) {
+    var done = doneCount(s.id);
+    var head = '<div class="card-h" data-act="toggle" data-s="' + s.id + '"><span class="sid">' + s.id + '</span><span class="stitle">' + esc(s.titel) +
+      '</span><span class="badge' + (s.prio === "Pflicht" ? " pflicht" : "") + '">' + esc(s.prio) + '</span><span class="badge' +
+      (done >= s.wdh ? " done" : "") + '">' + done + "/" + s.wdh + "</span></div>";
+    if (!ui.open[s.id]) return head;
+    var me = state.meta.person;
+    var b = '<div class="card-b"><p>' + esc(s.ziel) + "</p>";
+    ["A", "B"].forEach(function (p) {
+      var steps = s["ablauf_" + p.toLowerCase()] || [];
+      b += '<details class="' + (p === me ? "own" : "") + '"' + (p === me ? " open" : "") + "><summary>Ablauf Person " + p + (p === me ? " (Sie)" : "") +
+        "</summary><ol>" + steps.map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + "</ol></details>";
+    });
+    b += '<p class="expect"><b>Erwartet:</b> ' + esc(s.erwartet) + "</p>";
+    b += '<p class="muted">ca. ' + s.dauer_min + " min je Durchgang · empfohlen " + plural(s.wdh) + (s.material ? " · Material: " + esc(s.material) : "") + "</p>";
+    runsOf(s.id).forEach(function (r, i) { b += runHtml(s, r, i); });
+    b += '<button class="btn primary" data-act="new-run" data-s="' + s.id + '">+ Durchgang ' + (runsOf(s.id).length + 1) + " starten</button></div>";
+    return head + b;
+  }
+  function runHtml(s, r, i) {
+    var me = state.meta.person;
+    var h = '<div class="run"><div class="run-h"><b>Durchgang ' + r.durchgang + "</b>" +
+      '<input type="text" value="' + esc(r.kamera) + '" placeholder="Kamera-ID" data-act="kamera" data-s="' + s.id + '" data-r="' + i + '" aria-label="Kamera">' +
+      '<button class="mini" data-act="del-run" data-s="' + s.id + '" data-r="' + i + '" aria-label="Durchgang löschen">✕</button></div>' +
+      '<div class="muted">Konfiguration: ' + esc(r.konfig) + " (Verbleib " + r.parameter.verbleib_s + " s, Gepäck " + r.parameter.gepaeck_s + " s)</div>";
+    var lastT = null, lastLabel = "";
+    s.marken.forEach(function (mk) {
+      var v = r.marken[mk.id];
+      var cls = "mark " + (mk.wer === me ? "own" : "other") + (v ? " set" : "");
+      if (v && (lastT === null || v.t > lastT)) { lastT = v.t; lastLabel = mk.text; }
+      h += '<div class="' + cls + '"><button class="mark-btn" data-act="mark" data-s="' + s.id + '" data-r="' + i + '" data-m="' + mk.id + '">' +
+        esc(mk.text) + "<small>Person " + mk.wer + (mk.wer === me ? "" : " – nur falls nötig") + "</small></button>" +
+        '<span class="mark-time' + (v ? "" : " empty") + '">' + (v ? hms(v.t, true) + (v.manuell ? "*" : "") : "–") + "</span>" +
+        '<button class="mini" data-act="edit" data-s="' + s.id + '" data-r="' + i + '" data-m="' + mk.id + '" aria-label="Zeit bearbeiten">✎</button></div>';
+    });
+    if (lastT !== null && r.status === "offen") {
+      h += '<div class="since">seit »' + esc(lastLabel) + '«: <b data-since="' + lastT + '">' + dur((Date.now() - lastT) / 1000) + "</b></div>";
+    }
+    h += '<div class="run-f"><select data-act="status" data-s="' + s.id + '" data-r="' + i + '">' +
+      [["offen", "offen"], ["durchgefuehrt", "durchgeführt"], ["abgebrochen", "abgebrochen"], ["nicht_durchfuehrbar", "nicht durchführbar"]].map(function (o) {
+        return '<option value="' + o[0] + '"' + (r.status === o[0] ? " selected" : "") + ">" + o[1] + "</option>";
+      }).join("") + "</select>" +
+      '<textarea placeholder="Notiz (Besonderheiten, Störungen – keine Namen)" data-act="notiz" data-s="' + s.id + '" data-r="' + i + '">' + esc(r.notiz) + "</textarea></div></div>";
+    return h;
+  }
+
+  // ------------------------------------------------------------- Freie Marken
+  function renderFree() {
+    var html = state.frei.length ? "" : '<p class="muted">Noch keine freien Marken.</p>';
+    state.frei.slice().reverse().forEach(function (f) {
+      var idx = state.frei.indexOf(f);
+      html += '<div class="free"><span class="t">' + hms(f.t, true) + '</span><span>' + esc(f.text || "–") +
+        '</span><span class="row"><button class="mini" data-act="free-edit" data-i="' + idx + '" aria-label="Text bearbeiten">✎</button>' +
+        '<button class="mini" data-act="free-del" data-i="' + idx + '" aria-label="Löschen">✕</button></span></div>';
+    });
+    document.getElementById("free-list").innerHTML = html;
+  }
+
+  // ------------------------------------------------------------- Export
+  function exportData() {
+    var runs = [];
+    DEF.szenarien.forEach(function (s) {
+      runsOf(s.id).forEach(function (r) {
+        runs.push({
+          szenario: s.id, durchgang: r.durchgang, kamera: r.kamera, konfig: r.konfig, parameter: r.parameter,
+          status: r.status, notiz: r.notiz, angelegt: isoLocal(r.angelegt),
+          marken: s.marken.filter(function (mk) { return r.marken[mk.id]; }).map(function (mk) {
+            var v = r.marken[mk.id];
+            return { id: mk.id, zeit: isoLocal(v.t), zeit_ms: v.t, manuell: !!v.manuell, erfasst_von: state.meta.person };
+          })
+        });
+      });
+    });
+    return {
+      format: "kivideo-feldtest/1",
+      exportiert: isoLocal(Date.now()),
+      meta: state.meta,
+      durchgaenge: runs,
+      freie_marken: state.frei.map(function (f) { return { zeit: isoLocal(f.t), zeit_ms: f.t, text: f.text }; }),
+      szenarien: DEF,
+      geraet: navigator.userAgent
+    };
+  }
+  function exportCsv() {
+    var rows = [["person", "kuerzel", "szenario", "durchgang", "kamera", "konfig", "marke", "zeit_geraet", "zeit_server_korrigiert", "manuell", "status", "notiz"]];
+    var m = state.meta, off = offsetMs();
+    DEF.szenarien.forEach(function (s) {
+      runsOf(s.id).forEach(function (r) {
+        s.marken.forEach(function (mk) {
+          var v = r.marken[mk.id];
+          if (!v) return;
+          rows.push([m.person, m.kuerzel, s.id, r.durchgang, r.kamera, r.konfig, mk.id, isoLocal(v.t), isoLocal(v.t + off), v.manuell ? "ja" : "nein", r.status, r.notiz]);
+        });
+      });
+    });
+    state.frei.forEach(function (f) { rows.push([m.person, m.kuerzel, "FREI", "", "", "", "freie_marke", isoLocal(f.t), isoLocal(f.t + off), "nein", "", f.text]); });
+    return "﻿" + rows.map(function (r) {
+      return r.map(function (c) { c = String(c == null ? "" : c); return /[;"\n\r]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c; }).join(";");
+    }).join("\r\n");
+  }
+  function fileName(ext) {
+    var m = state.meta;
+    return "feldtest_" + (m.testtag || isoDate(Date.now())) + "_person-" + m.person + (m.kuerzel ? "_" + m.kuerzel.replace(/[^A-Za-z0-9_-]/g, "") : "") + "_" + hms(Date.now()).replace(/:/g, "") + "." + ext;
+  }
+  function shareOrDownload(content, type, name) {
+    var blob = new Blob([content], { type: type });
+    var file = null;
+    try { file = new File([blob], name, { type: type }); } catch (e) {}
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        navigator.share({ files: [file], title: name }).catch(function () { downloadBlob(blob, name); });
+        return;
+      } catch (e) {}
+    }
+    downloadBlob(blob, name);
+  }
+  function downloadBlob(blob, name) {
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+  function renderStats() {
+    var runs = 0, marks = 0;
+    Object.keys(state.runs).forEach(function (k) { state.runs[k].forEach(function (r) { runs++; marks += Object.keys(r.marken).length; }); });
+    document.getElementById("stats").textContent = runs + " Durchgänge, " + marks + " Zeitmarken, " + state.frei.length + " freie Marken erfasst.";
+  }
+
+  // ------------------------------------------------------------- Druck
+  function buildPrint() {
+    var m = state.meta, off = m.abgleich.offset_s, filled = hasData();
+    var line = function (v, w) { return v ? esc(v) : "<span class=\"p-blank\" style=\"min-width:" + (w || 60) + "pt\"></span>"; };
+    var h = '<div class="p-head"><h1>Feldtest KI-Videodetektion – Zeitprotokoll</h1><div class="p-meta">' +
+      "<div>Testtag: " + line(filled ? m.testtag : "", 70) + "</div>" +
+      "<div>Person: " + (filled ? esc(m.person) : "☐ A &nbsp; ☐ B") + " · Kürzel: " + line(filled ? m.kuerzel : "", 40) + "</div>" +
+      "<div>Bereich: " + line(m.ort, 120) + "</div>" +
+      "<div>Konfiguration: " + (filled ? esc(m.konfig) : "☐ Feldtest (verkürzt) &nbsp; ☐ Produktion") + "</div>" +
+      "<div>Kameras: G " + line(m.kameras.G, 50) + " · VB " + line(m.kameras.VB, 50) + " · GP " + line(m.kameras.GP, 50) + "</div>" +
+      "<div>Abweichung Server − Uhr: " + (off == null || !filled ? line("", 40) : esc(off)) + " s</div></div>" +
+      '<p class="p-hint">Uhrzeit von derselben Uhr mit Sekunden ablesen (HH:MM:SS) und im Moment der Handlung notieren. ' +
+      "Letzte Spalte: Reserve bzw. Abnahmelauf mit Produktionskonfiguration (Teil 2).</p></div>";
+    DEF.szenarien.forEach(function (s) {
+      var runs = runsOf(s.id), n = Math.max(s.wdh + 1, runs.length);
+      h += '<div class="p-s"><h2>' + s.id + " – " + esc(s.titel) + " (" + esc(s.prio) + ", " + plural(s.wdh) + ")</h2><p>" + esc(s.ziel) + "</p>" +
+        '<div class="p-cols"><div><b>Person A</b><ol>' + s.ablauf_a.map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + "</ol></div>" +
+        "<div><b>Person B</b><ol>" + s.ablauf_b.map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + "</ol></div></div>" +
+        "<p><b>Erwartet:</b> " + esc(s.erwartet) + (s.material ? " · <b>Material:</b> " + esc(s.material) : "") + "</p>";
+      h += "<table><tr><th>Marke (wer)</th>";
+      for (var i = 0; i < n; i++) h += "<th>" + (i < s.wdh || runs[i] ? "Durchgang " + (i + 1) : "Reserve / Teil 2") + "</th>";
+      h += "</tr>";
+      s.marken.forEach(function (mk) {
+        h += "<tr><td>" + esc(mk.text) + " (" + mk.wer + ")</td>";
+        for (var j = 0; j < n; j++) {
+          var v = runs[j] && runs[j].marken[mk.id];
+          h += '<td class="t">' + (v ? hms(v.t, true) : "__:__:__") + "</td>";
+        }
+        h += "</tr>";
+      });
+      h += "<tr><td>Kamera / Status</td>";
+      for (var k = 0; k < n; k++) h += "<td>" + (runs[k] ? esc(runs[k].kamera) + " / " + esc(runs[k].status) : "") + "</td>";
+      h += '</tr></table><div class="p-notes">Notizen:</div></div>';
+    });
+    h += '<div class="p-s p-free"><h2>Freie Marken (Störungen, reale Situationen, K2)</h2>' +
+      "<table><tr><th style=\"width:80pt\">Uhrzeit</th><th>Beschreibung (keine Namen, keine Personenmerkmale)</th></tr>";
+    var rows = state.frei.map(function (f) { return '<tr><td class="t">' + hms(f.t, true) + "</td><td>" + esc(f.text) + "</td></tr>"; });
+    for (var r = rows.length; r < 18; r++) rows.push('<tr><td class="t">__:__:__</td><td></td></tr>');
+    h += rows.join("") + "</table></div>";
+    document.getElementById("print-view").innerHTML = h;
+  }
+
+  // ------------------------------------------------------------- Aktionen
+  function newRun(id) {
+    var s = byId[id], runs = runsOf(id);
+    var cam = state.meta.kameras[s.gruppe] || "";
+    runs.push({
+      durchgang: runs.length ? runs[runs.length - 1].durchgang + 1 : 1,
+      kamera: cam, konfig: state.meta.konfig, parameter: Object.assign({}, state.meta.parameter),
+      marken: {}, status: "offen", notiz: "", angelegt: Date.now()
+    });
+    save();
+    renderCard(id);
+  }
+  function setMark(id, i, mid, t, manual) {
+    var s = byId[id], r = runsOf(id)[i];
+    r.marken[mid] = { t: t, manuell: !!manual };
+    if (r.status === "offen" && s.marken.every(function (mk) { return r.marken[mk.id]; })) r.status = "durchgefuehrt";
+    save();
+    renderCard(id);
+  }
+
+  document.addEventListener("click", function (ev) {
+    var el = ev.target.closest("[data-act], [data-tab]");
+    if (!el) return;
+    if (el.dataset.tab) { showTab(el.dataset.tab); return; }
+    var act = el.dataset.act, id = el.dataset.s, i = el.dataset.r != null ? +el.dataset.r : null, now = Date.now();
+    switch (act) {
+      case "toggle": ui.open[id] = !ui.open[id]; renderCard(id); break;
+      case "filter": ui.filter = el.dataset.f; renderFilters(); renderList(); break;
+      case "pflicht": ui.pflicht = !ui.pflicht; renderFilters(); renderList(); break;
+      case "new-run": newRun(id); break;
+      case "mark": {
+        var r = runsOf(id)[i], mid = el.dataset.m;
+        if (r.marken[mid] && !confirm("Zeit für »" + el.firstChild.textContent + "« überschreiben?")) return;
+        buzz();
+        setMark(id, i, mid, now, false);
+        var btn = document.querySelector('#card-' + id + ' [data-act="mark"][data-r="' + i + '"][data-m="' + mid + '"]');
+        if (btn) btn.classList.add("flash");
+        break;
+      }
+      case "edit": {
+        var r2 = runsOf(id)[i], mid2 = el.dataset.m, cur = r2.marken[mid2];
+        var txt = prompt("Uhrzeit (HH:MM:SS) – leer lassen zum Löschen", cur ? hms(cur.t, true) : hms(now));
+        if (txt === null) return;
+        if (txt.trim() === "") { delete r2.marken[mid2]; save(); renderCard(id); return; }
+        var t = parseHms(txt, cur ? cur.t : now);
+        if (t === null) { alert("Format HH:MM:SS erwartet"); return; }
+        setMark(id, i, mid2, t, true);
+        break;
+      }
+      case "del-run":
+        if (!confirm("Durchgang " + runsOf(id)[i].durchgang + " von " + id + " mit allen Zeiten löschen?")) return;
+        runsOf(id).splice(i, 1); save(); renderCard(id); break;
+      case "free": {
+        state.frei.push({ t: now, text: "" });
+        buzz(); save();
+        var text = prompt("Freie Marke " + hms(now) + " – kurze Beschreibung (optional):", "");
+        if (text) { state.frei[state.frei.length - 1].text = text; save(); }
+        renderFree(); renderStats();
+        break;
+      }
+      case "free-edit": {
+        var f = state.frei[+el.dataset.i];
+        var t2 = prompt("Beschreibung:", f.text || "");
+        if (t2 !== null) { f.text = t2; save(); renderFree(); }
+        break;
+      }
+      case "free-del":
+        if (confirm("Freie Marke löschen?")) { state.frei.splice(+el.dataset.i, 1); save(); renderFree(); renderStats(); }
+        break;
+      case "sync": {
+        state.meta.abgleich.geraet_ms = now;
+        state.meta.abgleich.server = hms(now);
+        state.meta.abgleich.offset_s = 0;
+        save(); renderStart();
+        var inp = document.getElementById("sync-server");
+        inp.focus(); inp.select();
+        break;
+      }
+      case "share-json": shareOrDownload(JSON.stringify(exportData(), null, 2), "application/json", fileName("json")); break;
+      case "share-csv": shareOrDownload(exportCsv(), "text/csv;charset=utf-8", fileName("csv")); break;
+      case "print": buildPrint(); window.print(); break;
+      case "import": document.getElementById("import-file").click(); break;
+      case "reset":
+        if (confirm("Wirklich ALLE erfassten Daten auf diesem Gerät löschen? Vorher exportieren!") && confirm("Endgültig löschen?")) {
+          state = fresh(); save(); renderAll();
+        }
+        break;
+    }
+  });
+
+  function isChoice(el) { return el.tagName === "SELECT" || el.type === "checkbox"; }
+  document.addEventListener("input", function (ev) { if (!isChoice(ev.target)) onField(ev.target); });
+  document.addEventListener("change", function (ev) { if (isChoice(ev.target)) onField(ev.target); });
+
+  function onField(el) {
+    var m = state.meta;
+    if (el.dataset.meta) {
+      m[el.dataset.meta] = el.value;
+      if (el.dataset.meta === "konfig" && DEF.konfigurationen[el.value]) {
+        m.parameter = Object.assign({}, DEF.konfigurationen[el.value]);
+        document.querySelectorAll("[data-param]").forEach(function (p) { p.value = m.parameter[p.dataset.param]; });
+      }
+      if (el.dataset.meta === "person") { renderPerson(); renderList(); }
+      saveSoon(); return;
+    }
+    if (el.dataset.kamera) { m.kameras[el.dataset.kamera] = el.value.trim(); saveSoon(); return; }
+    if (el.dataset.param) {
+      var v = parseInt(el.value, 10);
+      if (v > 0) { m.parameter[el.dataset.param] = v; m.konfig = "eigene"; document.getElementById("m-konfig").value = "eigene"; saveSoon(); }
+      return;
+    }
+    if (el.dataset.check) { m.checkliste[el.dataset.check] = el.checked; saveSoon(); return; }
+    if (el.id === "sync-server") {
+      var ref = m.abgleich.geraet_ms;
+      m.abgleich.server = el.value;
+      var t = ref ? parseHms(el.value, ref) : null;
+      if (t !== null) {
+        var diff = (t - ref) / 1000;
+        if (diff > 43200) diff -= 86400;
+        if (diff < -43200) diff += 86400;
+        m.abgleich.offset_s = Math.round(diff * 10) / 10;
+        document.getElementById("sync-offset").value = m.abgleich.offset_s;
+      }
+      saveSoon(); return;
+    }
+    if (el.id === "sync-offset") {
+      var o = parseFloat(el.value);
+      m.abgleich.offset_s = isFinite(o) ? o : null;
+      saveSoon(); return;
+    }
+    var act = el.dataset.act;
+    if (act === "kamera" || act === "notiz" || act === "status") {
+      var r = runsOf(el.dataset.s)[+el.dataset.r];
+      r[act] = act === "kamera" ? el.value.trim() : el.value;
+      saveSoon();
+      if (act === "status") renderCard(el.dataset.s);
+    }
+  }
+
+  document.getElementById("person-chip").addEventListener("click", function () {
+    state.meta.person = state.meta.person === "A" ? "B" : "A";
+    document.getElementById("m-person").value = state.meta.person;
+    save(); renderPerson(); renderList();
+  });
+
+  document.getElementById("import-file").addEventListener("change", function (ev) {
+    var file = ev.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var data = JSON.parse(reader.result);
+        if (data.format !== "kivideo-feldtest/1") throw new Error("Unbekanntes Format");
+        if (!confirm("Daten aus " + file.name + " übernehmen? Die aktuellen Daten auf diesem Gerät werden ersetzt.")) return;
+        var st = fresh();
+        st.meta = Object.assign(st.meta, data.meta);
+        (data.durchgaenge || []).forEach(function (d) {
+          var marken = {};
+          (d.marken || []).forEach(function (mk) { marken[mk.id] = { t: mk.zeit_ms, manuell: !!mk.manuell }; });
+          (st.runs[d.szenario] = st.runs[d.szenario] || []).push({
+            durchgang: d.durchgang, kamera: d.kamera || "", konfig: d.konfig || "", parameter: d.parameter || Object.assign({}, st.meta.parameter),
+            marken: marken, status: d.status || "offen", notiz: d.notiz || "", angelegt: Date.parse(d.angelegt) || Date.now()
+          });
+        });
+        st.frei = (data.freie_marken || []).map(function (f) { return { t: f.zeit_ms, text: f.text || "" }; });
+        state = st; save(); renderAll();
+      } catch (e) { alert("Import fehlgeschlagen: " + e.message); }
+    };
+    reader.readAsText(file);
+    ev.target.value = "";
+  });
+
+  window.addEventListener("beforeprint", buildPrint);
+
+  function showTab(tab) {
+    ui.tab = tab;
+    document.querySelectorAll("[data-tab]").forEach(function (b) { b.setAttribute("aria-selected", String(b.dataset.tab === tab)); });
+    ["start", "szenarien", "frei", "export"].forEach(function (t) { document.getElementById("tab-" + t).hidden = t !== tab; });
+    if (tab === "export") renderStats();
+    window.scrollTo(0, 0);
+  }
+
+  function tick() {
+    var now = Date.now(), off = state.meta.abgleich.offset_s;
+    document.getElementById("clock").firstChild.nodeValue = hms(now);
+    document.getElementById("clock2").textContent = typeof off === "number" && off !== 0 ?
+      "Gerät · Server ≈ " + hms(now + off * 1000) : "Gerätezeit";
+    document.querySelectorAll("[data-since]").forEach(function (el) { el.textContent = dur((now - +el.dataset.since) / 1000); });
+  }
+
+  function renderAll() { renderStart(); renderFilters(); renderList(); renderFree(); renderStats(); }
+
+  renderAll();
+  buildPrint();
+  save();
+  tick();
+  setInterval(tick, 200);
+})();
+</script>
+</body>
+</html>
